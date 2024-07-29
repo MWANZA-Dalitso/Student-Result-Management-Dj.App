@@ -1,0 +1,238 @@
+{% extends "base_generic.html" %}
+{% load static %}
+<title>{% block title %} File Uploader{% endblock title %} </title>
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+<style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+
+body {
+display: flex;
+align-items: center;
+justify-content: center;
+min-height: 100vh;
+background: rgba(214, 233, 246, 0.907);
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+::selection {
+color: #fff;
+background: #43171700;
+}
+
+.wrapper {
+width: 600px;
+background: #fff;
+border-radius: 5px;
+padding: 30px;
+box-shadow: 7px 7px 12px rgba(0, 0, 0, 0.05);
+}
+
+.wrapper header {
+color: #172443;
+font-size: 27px;
+font-weight: 600;
+text-align: center;
+}
+
+.wrapper form {
+height: 200px;
+display: flex;
+cursor: pointer;
+margin: 30px 0;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+border-radius: 5px;
+border: 2px dashed #172443;
+}
+
+form i {
+color: #172443;
+font-size: 100px; /* Make the upload icon larger */
+}
+
+form p {
+margin-top: 15px;
+font-size: 16px;
+color: #172443;
+}
+
+section .row {
+margin-bottom: 10px;
+background: #E9F0FF;
+list-style: none;
+padding: 15px 20px;
+border-radius: 5px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+}
+
+section .row i {
+color: #172443;
+font-size: 30px;
+}
+
+section .details span {
+font-size: 14px;
+}
+
+.progress-area .row .content {
+width: 100%;
+margin-left: 15px;
+}
+
+.progress-area .details {
+display: flex;
+align-items: center;
+margin-bottom: 7px;
+justify-content: space-between;
+}
+
+.progress-area .content .progress-bar {
+height: 6px;
+width: 100%;
+margin-bottom: 4px;
+background: #fff;
+border-radius: 30px;
+}
+
+.content .progress-bar .progress {
+height: 100%;
+width: 0%;
+background: #031541;
+border-radius: inherit;
+}
+
+.upload-area {
+max-height: 233px;
+overflow-y: scroll;
+}
+
+.uploaded-area.onprogress {
+max-height: 150px;
+}
+
+.uploaded-area::-webkit-scrollbar {
+width: 0px;
+}
+
+.uploaded-area .row .content {
+display: flex;
+}
+
+.uploaded-area .row .details {
+display: flex;
+margin-left: 15px;
+flex-direction: column;
+}
+
+.upload-area .row .details .size {
+color: #404044;
+font-size: 11px;
+}
+
+.uploaded-area i.bx-check {
+font-size: 16px;
+}
+
+</style>
+
+<div class="wrapper">
+<header>Add Document</header>
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+
+<input class="file-input" type="file" name="file" hidden>
+<i class='bx bxs-cloud-upload'></i>
+<p>Browse File to Upload</p>
+</form>
+<section class="progress-area"></section>
+<section class="uploaded-area"></section>
+</div>
+
+<script>  
+document.addEventListener("DOMContentLoaded", function () {
+const form = document.querySelector('form');
+const fileInput = document.querySelector(".file-input");
+const progressArea = document.querySelector(".progress-area");
+const uploadedArea = document.querySelector(".uploaded-area");
+
+// form click handler
+form.addEventListener("click", () => {
+fileInput.click();
+});
+
+fileInput.onchange = ({ target }) => {
+let file = target.files[0];
+if (file) {
+let fileName = file.name;
+if (fileName.length >= 12) {
+  let splitName = fileName.split('.');
+  fileName = splitName[0].substring(0, 13) + "..." + splitName[1];
+}
+uploadFile(fileName);
+}
+}
+
+// file upload function
+function uploadFile(name) {
+let xhr = new XMLHttpRequest();
+xhr.open("POST", "php/upload.php");
+xhr.upload.addEventListener("progress", ({ loaded, total }) => {
+let fileLoaded = Math.floor((loaded / total) * 100);
+let fileTotal = Math.floor(total / 1000);
+let fileSize;
+if (fileTotal < 1024) {
+  fileSize = fileTotal + " KB";
+} else {
+  fileSize = ((loaded / 1024 / 1024)).toFixed(2) + " MB";
+}
+let progressHTML = `<li class="row">
+                      <i class="bx bxs-file"></i>
+                      <div class="content">
+                        <div class="details">
+                          <span class="name">${name}. Uploading</span>
+                          <span class="percent">${fileLoaded}%</span>
+                        </div>
+                        <div class="progress-bar">
+                          <div class="progress" style="width: ${fileLoaded}%"></div>
+                        </div>
+                      </div>
+                    </li>`;
+
+progressArea.innerHTML = progressHTML;
+uploadedArea.classList.add("onprogress");
+
+if (loaded === total) {
+  progressArea.innerHTML = "";
+  let uploadedHTML = `<li class="row">
+                        <div class="content upload">
+                          <i class="bx bxs-check-circle"></i>
+                          <div class="details">
+                            <span class="name">${name}. Uploaded</span>
+                            <span class="size">${fileSize}</span>
+                          </div>
+                        </div>
+                        <i class="bx bxs-check-circle"></i>
+                      </li>`;
+  uploadedArea.classList.remove("onprogress");
+  uploadedArea.insertAdjacentHTML("afterbegin", uploadedHTML);
+}
+});
+
+let data = new FormData(form);
+xhr.send(data);
+}
+});
+</script>
+
+{% endblock content %}
